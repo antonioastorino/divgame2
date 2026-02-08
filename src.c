@@ -17,11 +17,9 @@
 #define WINDOW_HEIGHT_PX (800)
 #define PLAYER_SPEED_XY (300)
 #define PLAYER_SIZE_PX (100)
-#define PLAYER_MIN_POSITION (100)
-#define PLAYER_MAX_POSITION_X (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION)
+#define PLAYER_MIN_POSITION_X (100)
+#define PLAYER_MAX_POSITION_X (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION_X)
 #define SCROLL_MAX (WINDOW_WIDTH_PX)
-// When SCROLL_SPEED == 0, scrolling is performed when the player reaches the edges of its horizontal domain.
-// When SCROLL_SPEED != 0, scrolling is controlled by the speed value
 #define SCROLL_SPEED (50)
 
 typedef struct
@@ -81,7 +79,7 @@ typedef enum
     GAME_OVER,
 } GameState;
 
-GameState g_game_state       = GAME_RUNNING;
+GameState g_game_state       = GAME_BEGIN;
 int g_keys_pressed           = 0;
 PlayerAction g_player_action = {0};
 Entity g_player              = {0};
@@ -153,11 +151,12 @@ void __evolve(void)
         if (g_player_action.player_start)
         {
             g_game_state                 = GAME_RUNNING;
-            g_player.position            = (Vector3D){.x = PLAYER_MAX_POSITION_X, .y = WINDOW_HEIGHT_PX / 2, .z = 0};
+            g_player.position            = (Vector3D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2, .z = 0};
             g_player_action.player_start = false;
             g_score                      = 0;
             jsUpdateScore(0);
-            jsUpdatePlayerPosition((Vector3D){0});
+            jsUpdatePlayerPosition(g_player.position);
+            jsLogVector3D(g_player.position);
             jsUpdateScroll(0);
         }
         break;
@@ -165,14 +164,12 @@ void __evolve(void)
         if (g_player_action.player_pause)
         {
             g_game_state = GAME_PAUSED;
-            break;
         }
         break;
     case GAME_PAUSED:
         if (!g_player_action.player_pause)
         {
             g_game_state = GAME_RUNNING;
-            g_dt         = 0;
         }
         break;
     } // switch(g_game_state)
@@ -184,34 +181,29 @@ void __update_output(void)
     {
         g_player.position.x += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_right - g_player_action.player_left);
         g_player.position.y += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_up - g_player_action.player_down);
-    }
-    g_scroll += g_dt * SCROLL_SPEED;
-    if (g_player.position.x < PLAYER_MIN_POSITION)
-    {
-        g_player.position.x = PLAYER_MIN_POSITION;
-#if SCROLL_SPEED == 0
-        g_scroll -= g_dt * PLAYER_SPEED_XY;
-#endif /* SCROLL_SPEED > 0 */
+        g_scroll += g_dt * SCROLL_SPEED;
+
+        if (g_player.position.x < PLAYER_MIN_POSITION_X)
+        {
+            g_player.position.x = PLAYER_MIN_POSITION_X;
+        }
+        if (g_player.position.x > PLAYER_MAX_POSITION_X)
+        {
+            g_player.position.x = PLAYER_MAX_POSITION_X;
+        }
         if (g_scroll < 0)
         {
             // Infinite negative scroll
             g_scroll = SCROLL_MAX;
         }
-    }
-    if (g_player.position.x > PLAYER_MAX_POSITION_X)
-    {
-        g_player.position.x = PLAYER_MAX_POSITION_X;
-#if SCROLL_SPEED == 0
-        g_scroll += g_dt * PLAYER_SPEED_XY;
-#endif /* SCROLL_SPEED > 0 */
         if (g_scroll > SCROLL_MAX)
         {
             // Infinite positive scroll
             g_scroll = 0;
         }
+        jsUpdatePlayerPosition(g_player.position);
+        jsUpdateScroll(g_scroll);
     }
-    jsUpdatePlayerPosition(g_player.position);
-    jsUpdateScroll(g_scroll);
 }
 
 GameState engine_update(void)

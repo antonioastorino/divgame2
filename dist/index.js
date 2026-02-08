@@ -55,28 +55,33 @@ function jsSetEngineParams(params_p) {
 
 let prevTimeStamp = 0;
 function nextFrame(t_ms) {
-  if (prevTimeStamp == 0) {
-    prevTimeStamp = t_ms;
-  }
-  g_dt = (t_ms - prevTimeStamp) / 1000;
-  if (g_dt > 0.05) {
-    g_dt = 0.05;
-  }
-  prevTimeStamp = t_ms;
-  const gameState = GameState.RUNNING;
+  const gameState = g_engine_update_cb();
   switch (gameState) {
     case GameState.BEGIN:
       g_beginViewDiv.style.display = "flex";
+      g_dt = 0;
       break;
     case GameState.OVER:
       g_overViewDiv.style.display = "flex";
       document.getElementById("final-score").innerText = g_finalScore.toFixed(2);
+      g_dt = 0;
       break;
-    default:
+    case GameState.RUNNING:
+      if (prevTimeStamp == 0) {
+        prevTimeStamp = t_ms;
+      }
+      g_dt = (t_ms - prevTimeStamp) / 1000;
+      if (g_dt > 0.05) {
+        g_dt = 0.05;
+      }
+      prevTimeStamp = t_ms;
       g_beginViewDiv.style.display = "none";
       g_overViewDiv.style.display = "none";
+      break;
+    case GameState.PAUSED:
+      g_dt = 0;
+      break;
   }
-  g_engine_update_cb();
   requestAnimationFrame(nextFrame);
 }
 
@@ -126,13 +131,11 @@ window.onload = () => {
   const scrollerBackDiv = document.getElementById("scroller-back");
   scrollerBackDiv.style.position = "static";
   scrollerBackDiv.style.height = "100%";
-  scrollerBackDiv.style.width = "10000px";
   scrollerBackDiv.style.backgroundRepeat = "round";
   scrollerBackDiv.style.backgroundImage = "url(/assets/clouds.jpg)";
   const scrollerDiv = document.getElementById("scroller");
   scrollerDiv.style.position = "static";
   scrollerDiv.style.height = "100%";
-  scrollerDiv.style.width = "10000px";
   scrollerDiv.style.backgroundImage = "url(/assets/mountains.png)";
   scrollerDiv.style.backgroundRepeat = "round";
 
@@ -183,6 +186,8 @@ window.onload = () => {
     for (let i = 0; i < g_num_of_walls; i++) {
       g_walls.push(new Wall());
     }
+    scrollerBackDiv.style.width = `${2 * g_window_width}px`;
+    scrollerDiv.style.width = `${2 * g_window_width}px`;
     g_canvas.style.width = `${g_window_width}px`;
     g_canvas.style.height = `${g_window_height}px`;
     g_canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
