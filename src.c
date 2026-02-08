@@ -16,9 +16,13 @@
 #define WINDOW_WIDTH_PX (IMAGE_WIDTH_PX * 2)
 #define WINDOW_HEIGHT_PX (800)
 #define PLAYER_SPEED_XY (300)
-#define PLAYER_MIN_POSITION (300)
-#define PLAYER_MAX_POSITION (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION)
+#define PLAYER_SIZE_PX (100)
+#define PLAYER_MIN_POSITION (100)
+#define PLAYER_MAX_POSITION_X (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION)
 #define SCROLL_MAX (WINDOW_WIDTH_PX)
+// When SCROLL_SPEED == 0, scrolling is performed when the player reaches the edges of its horizontal domain.
+// When SCROLL_SPEED != 0, scrolling is controlled by the speed value
+#define SCROLL_SPEED (50)
 
 typedef struct
 {
@@ -56,6 +60,7 @@ typedef struct
 {
     int window_height_px;
     int window_width_px;
+    int player_size_px;
 } EngineParams;
 
 typedef struct
@@ -100,6 +105,7 @@ void engine_init(void)
     jsSetEngineParams((EngineParams){
         .window_height_px = WINDOW_HEIGHT_PX,
         .window_width_px  = WINDOW_WIDTH_PX,
+        .player_size_px   = PLAYER_SIZE_PX,
     });
 }
 
@@ -147,7 +153,7 @@ void __evolve(void)
         if (g_player_action.player_start)
         {
             g_game_state                 = GAME_RUNNING;
-            g_player.position            = (Vector3D){.x = 0, .y = 0, .z = 0};
+            g_player.position            = (Vector3D){.x = PLAYER_MAX_POSITION_X, .y = WINDOW_HEIGHT_PX / 2, .z = 0};
             g_player_action.player_start = false;
             g_score                      = 0;
             jsUpdateScore(0);
@@ -179,21 +185,28 @@ void __update_output(void)
         g_player.position.x += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_right - g_player_action.player_left);
         g_player.position.y += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_up - g_player_action.player_down);
     }
+    g_scroll += g_dt * SCROLL_SPEED;
     if (g_player.position.x < PLAYER_MIN_POSITION)
     {
         g_player.position.x = PLAYER_MIN_POSITION;
+#if SCROLL_SPEED == 0
         g_scroll -= g_dt * PLAYER_SPEED_XY;
+#endif /* SCROLL_SPEED > 0 */
         if (g_scroll < 0)
         {
+            // Infinite negative scroll
             g_scroll = SCROLL_MAX;
         }
     }
-    if (g_player.position.x > PLAYER_MAX_POSITION)
+    if (g_player.position.x > PLAYER_MAX_POSITION_X)
     {
-        g_player.position.x = PLAYER_MAX_POSITION;
+        g_player.position.x = PLAYER_MAX_POSITION_X;
+#if SCROLL_SPEED == 0
         g_scroll += g_dt * PLAYER_SPEED_XY;
+#endif /* SCROLL_SPEED > 0 */
         if (g_scroll > SCROLL_MAX)
         {
+            // Infinite positive scroll
             g_scroll = 0;
         }
     }

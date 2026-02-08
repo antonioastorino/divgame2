@@ -7,6 +7,7 @@ let g_window_width = 0;
 let g_fov_max_z = 0;
 let g_fov_min_z = 0;
 let g_num_of_walls = 0;
+let g_player_size = 0;
 let g_canvas = undefined;
 let g_canvasBack = undefined;
 let g_scoreValueDiv = undefined;
@@ -49,7 +50,7 @@ const jsLogFloat = (v) => {
 };
 
 function jsSetEngineParams(params_p) {
-  [g_window_height, g_window_width] = new Int32Array(memory.buffer, params_p, 2);
+  [g_window_height, g_window_width, g_player_size] = new Int32Array(memory.buffer, params_p, 3);
 }
 
 let prevTimeStamp = 0;
@@ -90,7 +91,7 @@ function jsUpdateScore(score) {
 
 function jsUpdatePlayerPosition(position_p) {
   const [x, y] = new Float32Array(memory.buffer, position_p, 2);
-  g_playerDiv.style.left = `${x}px`;
+  g_playerDiv.style.left = `${x - g_player_size / 2}px`;
   g_playerDiv.style.bottom = `${y}px`;
 }
 
@@ -171,12 +172,9 @@ window.onload = () => {
   scoreDiv.style.fontFamily = "monospace";
 
   g_playerDiv.style.position = "sticky";
-  g_playerDiv.style.width = "100px";
-  g_playerDiv.style.height = "100px";
-  g_playerDiv.style.bottom = "100px";
-  g_playerDiv.style.left = "200px";
   g_playerDiv.style.zIndex = 100000;
-  g_playerDiv.style.backgroundColor = "red";
+  g_playerDiv.style.backgroundImage = "url(/assets/player.png)";
+  g_playerDiv.style.backgroundSize = "contain";
 
   WebAssembly.instantiateStreaming(wasmFile, importObj).then((result) => {
     memory = result.instance.exports.memory;
@@ -193,6 +191,8 @@ window.onload = () => {
     g_canvasBack.style.height = `${g_window_height}px`;
     g_canvasBack.style.top = `calc(50% - ${g_window_height / 2}px)`;
     g_canvasBack.style.left = `calc(50% - ${g_window_width / 2}px)`;
+    g_playerDiv.style.width = `${g_player_size}px`;
+    g_playerDiv.style.height = `${g_player_size}px`;
     body.onkeydown = (ev) => {
       ev.preventDefault();
       result.instance.exports.engine_key_down(ev.keyCode);
