@@ -12,6 +12,7 @@ let g_scoreValueDiv = undefined;
 let g_beginViewDiv = undefined;
 let g_overViewDiv = undefined;
 let g_playerDiv = undefined;
+let g_engine_update_cb = undefined;
 let g_finalScore = 0;
 
 const GameState = {
@@ -51,7 +52,6 @@ function jsSetEngineParams(params_p) {
 }
 
 let prevTimeStamp = 0;
-let scroll = 0;
 function nextFrame(t_ms) {
   if (prevTimeStamp == 0) {
     prevTimeStamp = t_ms;
@@ -74,8 +74,7 @@ function nextFrame(t_ms) {
       g_beginViewDiv.style.display = "none";
       g_overViewDiv.style.display = "none";
   }
-  g_canvas.scroll(scroll, 0);
-  scroll++;
+  g_engine_update_cb();
   requestAnimationFrame(nextFrame);
 }
 
@@ -88,6 +87,18 @@ function jsUpdateScore(score) {
   g_scoreValueDiv.innerText = score;
 }
 
+function jsUpdatePlayerPosition(position_p) {
+  const [x, y] = new Float32Array(memory.buffer, position_p, 2);
+  g_playerDiv.style.left = `${x}px`;
+  g_playerDiv.style.bottom = `${y}px`;
+  g_canvas.scroll(x, 0);
+}
+
+function jsUpdateScroll(scroll) {
+  g_canvas.scroll(scroll, 0);
+}
+
+
 const importObj = {
   env: {
     jsLogVector3D,
@@ -97,6 +108,8 @@ const importObj = {
     jsGetDt,
     jsSetEngineParams,
     jsUpdateScore,
+    jsUpdatePlayerPosition,
+    jsUpdateScroll,
   },
 };
 
@@ -174,6 +187,7 @@ window.onload = () => {
       ev.preventDefault();
       result.instance.exports.engine_key_up(ev.keyCode);
     };
+    g_engine_update_cb = result.instance.exports.engine_update;
     requestAnimationFrame(nextFrame);
   });
 };
