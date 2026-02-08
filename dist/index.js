@@ -8,6 +8,7 @@ let g_fov_max_z = 0;
 let g_fov_min_z = 0;
 let g_num_of_walls = 0;
 let g_canvas = undefined;
+let g_canvasBack = undefined;
 let g_scoreValueDiv = undefined;
 let g_beginViewDiv = undefined;
 let g_overViewDiv = undefined;
@@ -91,13 +92,12 @@ function jsUpdatePlayerPosition(position_p) {
   const [x, y] = new Float32Array(memory.buffer, position_p, 2);
   g_playerDiv.style.left = `${x}px`;
   g_playerDiv.style.bottom = `${y}px`;
-  g_canvas.scroll(x, 0);
 }
 
 function jsUpdateScroll(scroll) {
   g_canvas.scroll(scroll, 0);
+  g_canvasBack.scroll(scroll / 2, 0);
 }
-
 
 const importObj = {
   env: {
@@ -114,6 +114,7 @@ const importObj = {
 };
 
 window.onload = () => {
+  g_canvasBack = document.getElementById("canvas-back");
   g_canvas = document.getElementById("canvas");
   g_playerDiv = document.getElementById("player");
   const scoreDiv = document.getElementById("score");
@@ -121,17 +122,26 @@ window.onload = () => {
   const body = document.getElementById("body");
   g_beginViewDiv = document.getElementById("game-begin-view");
   g_overViewDiv = document.getElementById("game-over-view");
+  const scrollerBackDiv = document.getElementById("scroller-back");
+  scrollerBackDiv.style.position = "static";
+  scrollerBackDiv.style.height = "100%";
+  scrollerBackDiv.style.width = "10000px";
+  scrollerBackDiv.style.backgroundRepeat = "round";
+  scrollerBackDiv.style.backgroundImage = "url(/assets/clouds.jpg)";
   const scrollerDiv = document.getElementById("scroller");
+  scrollerDiv.style.position = "static";
   scrollerDiv.style.height = "100%";
   scrollerDiv.style.width = "10000px";
-  scrollerDiv.style.backgroundImage = "url(/assets/mountains.jpg)";
+  scrollerDiv.style.backgroundImage = "url(/assets/mountains.png)";
+  scrollerDiv.style.backgroundRepeat = "round";
 
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
-  g_canvas.style.position = "absolute";
-  g_canvas.style.backgroundColor = "black";
-  g_canvas.style.overflow = "hidden";
   g_beginViewDiv.style.position = "relative";
+  g_canvasBack.style.position = "absolute";
+  g_canvasBack.style.overflow = "hidden";
+  g_canvas.style.position = "absolute";
+  g_canvas.style.overflow = "hidden";
   g_beginViewDiv.style.width = "100%";
   g_beginViewDiv.style.height = "100%";
   g_beginViewDiv.style.backgroundColor = "blue";
@@ -155,7 +165,7 @@ window.onload = () => {
   g_overViewDiv.style.fontFamily = "monospace";
   g_overViewDiv.style.textAlign = "center";
 
-  scoreDiv.style.position = "absolute";
+  scoreDiv.style.position = "fixed";
   scoreDiv.style.display = "block";
   scoreDiv.style.zIndex = 99999;
   scoreDiv.style.fontFamily = "monospace";
@@ -179,6 +189,10 @@ window.onload = () => {
     g_canvas.style.height = `${g_window_height}px`;
     g_canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
     g_canvas.style.left = `calc(50% - ${g_window_width / 2}px)`;
+    g_canvasBack.style.width = `${g_window_width}px`;
+    g_canvasBack.style.height = `${g_window_height}px`;
+    g_canvasBack.style.top = `calc(50% - ${g_window_height / 2}px)`;
+    g_canvasBack.style.left = `calc(50% - ${g_window_width / 2}px)`;
     body.onkeydown = (ev) => {
       ev.preventDefault();
       result.instance.exports.engine_key_down(ev.keyCode);

@@ -12,12 +12,13 @@
 #define _RIGHT_MASK (1 << (KEY_D - KEY_BASE))
 #define _PAUSE_MASK (1 << (KEY_P - KEY_BASE))
 #define _START_MASK (1 << (KEY_G - KEY_BASE))
-#define WINDOW_WIDTH_PX (1000)
-#define WINDOW_HEIGHT_PX (600)
+#define IMAGE_WIDTH_PX (624)
+#define WINDOW_WIDTH_PX (IMAGE_WIDTH_PX * 2)
+#define WINDOW_HEIGHT_PX (800)
 #define PLAYER_SPEED_XY (300)
 #define PLAYER_MIN_POSITION (300)
 #define PLAYER_MAX_POSITION (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION)
-#define SCROLL_MAX (10000)
+#define SCROLL_MAX (WINDOW_WIDTH_PX)
 
 typedef struct
 {
@@ -184,7 +185,7 @@ void __update_output(void)
         g_scroll -= g_dt * PLAYER_SPEED_XY;
         if (g_scroll < 0)
         {
-            g_scroll = 0;
+            g_scroll = SCROLL_MAX;
         }
     }
     if (g_player.position.x > PLAYER_MAX_POSITION)
@@ -193,13 +194,11 @@ void __update_output(void)
         g_scroll += g_dt * PLAYER_SPEED_XY;
         if (g_scroll > SCROLL_MAX)
         {
-            g_scroll = SCROLL_MAX;
+            g_scroll = 0;
         }
     }
     jsUpdatePlayerPosition(g_player.position);
     jsUpdateScroll(g_scroll);
-    jsLogVector3D(g_player.position);
-    jsLogFloat(g_scroll);
 }
 
 GameState engine_update(void)
