@@ -131,13 +131,16 @@ window.onload = () => {
   const scrollerBackDiv = document.getElementById("scroller-back");
   scrollerBackDiv.style.position = "static";
   scrollerBackDiv.style.height = "100%";
-  scrollerBackDiv.style.backgroundRepeat = "round";
+  scrollerBackDiv.style.backgroundRepeat = "no-repeat";
   scrollerBackDiv.style.backgroundImage = "url(/assets/clouds.jpg)";
+  scrollerBackDiv.style.backgroundSize = "100% 100%";
+
   const scrollerDiv = document.getElementById("scroller");
   scrollerDiv.style.position = "static";
   scrollerDiv.style.height = "100%";
   scrollerDiv.style.backgroundImage = "url(/assets/mountains.png)";
-  scrollerDiv.style.backgroundRepeat = "round";
+  scrollerDiv.style.backgroundRepeat = "no-repeat";
+  scrollerDiv.style.backgroundSize = "100% 100%";
 
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
