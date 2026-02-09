@@ -6,16 +6,19 @@
 #define KEY_D (68)
 #define KEY_P (80)
 #define KEY_G (71)
+#define KEY_J (74)
 #define _UP_MASK (1 << (KEY_W - KEY_BASE))
 #define _LEFT_MASK (1 << (KEY_A - KEY_BASE))
 #define _DOWN_MASK (1 << (KEY_S - KEY_BASE))
 #define _RIGHT_MASK (1 << (KEY_D - KEY_BASE))
+#define _FIRE_MASK (1 << (KEY_J - KEY_BASE))
 #define _PAUSE_MASK (1 << (KEY_P - KEY_BASE))
 #define _START_MASK (1 << (KEY_G - KEY_BASE))
 #define WINDOW_WIDTH_PX (1000)
 #define WINDOW_HEIGHT_PX (600)
 #define PLAYER_SPEED_XY (300)
 #define PLAYER_SIZE_PX (WINDOW_HEIGHT_PX / 8)
+#define PLAYER_MIN_FIRE_PERIOD_S (0.5)
 #define PLAYER_MIN_POSITION_X (100)
 #define PLAYER_MAX_POSITION_X (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION_X)
 #define SCROLL_MAX (WINDOW_WIDTH_PX)
@@ -66,7 +69,10 @@ typedef struct
     bool player_right;
     bool player_up;
     bool player_down;
+    bool player_fire;
+    float player_fire_time;
     bool player_pause;
+    bool prev_player_pause;
     bool player_start;
 } PlayerAction;
 
@@ -96,6 +102,7 @@ void jsSetEngineParams(EngineParams);
 void jsUpdateScore(int);
 void jsUpdatePlayerPosition(Vector3D);
 void jsUpdateScroll(int);
+void jsFire(void);
 
 void engine_init(void)
 {
@@ -131,11 +138,12 @@ void __read_input(void)
     g_player_action.player_down  = (g_keys_pressed & _DOWN_MASK);
     g_player_action.player_right = (g_keys_pressed & _RIGHT_MASK);
     g_player_action.player_left  = (g_keys_pressed & _LEFT_MASK);
+    g_player_action.player_fire  = (g_keys_pressed & _FIRE_MASK);
 
     bool curr_pause_pressed = (g_keys_pressed & _PAUSE_MASK) && (g_game_state == GAME_RUNNING || g_game_state == GAME_PAUSED);
     if (!g_prev_pause_pressed && curr_pause_pressed)
     {
-        g_player_action.player_pause = !g_player_action.player_pause;
+        g_player_action.prev_player_pause = !g_player_action.prev_player_pause;
     }
     g_prev_pause_pressed         = curr_pause_pressed;
     g_player_action.player_start = (g_keys_pressed & _START_MASK) && (g_game_state == GAME_BEGIN || g_game_state == GAME_OVER);
@@ -149,10 +157,11 @@ void __evolve(void)
     case GAME_OVER:
         if (g_player_action.player_start)
         {
-            g_game_state                 = GAME_RUNNING;
-            g_player.position            = (Vector3D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2, .z = 0};
-            g_player_action.player_start = false;
-            g_score                      = 0;
+            g_game_state                     = GAME_RUNNING;
+            g_player.position                = (Vector3D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2, .z = 0};
+            g_player_action.player_start     = false;
+            g_player_action.player_fire_time = 0.0;
+            g_score                          = 0;
             jsUpdateScore(0);
             jsUpdatePlayerPosition(g_player.position);
             jsLogVector3D(g_player.position);
@@ -160,13 +169,13 @@ void __evolve(void)
         }
         break;
     case GAME_RUNNING:
-        if (g_player_action.player_pause)
+        if (g_player_action.prev_player_pause)
         {
             g_game_state = GAME_PAUSED;
         }
         break;
     case GAME_PAUSED:
-        if (!g_player_action.player_pause)
+        if (!g_player_action.prev_player_pause)
         {
             g_game_state = GAME_RUNNING;
         }
@@ -202,6 +211,25 @@ void __update_output(void)
         }
         jsUpdatePlayerPosition(g_player.position);
         jsUpdateScroll(g_scroll);
+        if (g_player_action.player_fire)
+        {
+            if (g_player_action.player_fire_time == 0.0)
+            {
+                jsFire();
+            }
+            if (g_player_action.player_fire_time < PLAYER_MIN_FIRE_PERIOD_S)
+            {
+                g_player_action.player_fire_time += g_dt;
+            }
+            else
+            {
+                g_player_action.player_fire_time = 0.0;
+            }
+        }
+        else
+        {
+            g_player_action.player_fire_time = 0.0;
+        }
     }
 }
 

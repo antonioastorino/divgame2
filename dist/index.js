@@ -105,6 +105,10 @@ function jsUpdateScroll(scroll) {
   g_canvasBack.scroll(scroll / 2, 0);
 }
 
+function jsFire() {
+  console.log("fire");
+}
+
 const importObj = {
   env: {
     jsLogVector3D,
@@ -116,6 +120,7 @@ const importObj = {
     jsUpdateScore,
     jsUpdatePlayerPosition,
     jsUpdateScroll,
+    jsFire,
   },
 };
 
