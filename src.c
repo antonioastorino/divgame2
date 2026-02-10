@@ -99,9 +99,7 @@ void jsLogInt(int);
 void jsLogFloat(float);
 float jsGetDt(void);
 void jsSetEngineParams(EngineParams);
-void jsUpdateScore(int);
-void jsUpdatePlayerPosition(Vector3D);
-void jsUpdateScroll(int);
+void jsUpdate(int, float, Vector3D);
 void jsFire(void);
 
 void engine_init(void)
@@ -162,10 +160,7 @@ void __evolve(void)
             g_player_action.player_start     = false;
             g_player_action.player_fire_time = 0.0;
             g_score                          = 0;
-            jsUpdateScore(0);
-            jsUpdatePlayerPosition(g_player.position);
-            jsLogVector3D(g_player.position);
-            jsUpdateScroll(0);
+            jsUpdate(g_score, g_scroll, g_player.position);
         }
         break;
     case GAME_RUNNING:
@@ -209,8 +204,6 @@ void __update_output(void)
             // Infinite positive scroll
             g_scroll = 0;
         }
-        jsUpdatePlayerPosition(g_player.position);
-        jsUpdateScroll(g_scroll);
         if (g_player_action.player_fire)
         {
             if (g_player_action.player_fire_time == 0.0)
@@ -230,6 +223,7 @@ void __update_output(void)
         {
             g_player_action.player_fire_time = 0.0;
         }
+        jsUpdate(g_score, g_scroll, g_player.position);
     }
 }
 

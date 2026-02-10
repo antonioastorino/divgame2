@@ -7,13 +7,15 @@
   </head>
   <body id="body">
     <script src="./index.js" type="module"></script>
-    <div id="canvas-back">
-      <div id="scroller-back"></div>
-    </div>
     <div id="canvas">
-      <div id="game-begin-view">G to start <br />W, A, S, D to move<br />P to pause</div>
       <div id="score">SCORE: <span id="score-value">0</span></div>
-      <div id="scroller"></div>
+      <div id="scroller-back-container">
+        <div id="scroller-back"></div>
+      </div>
+      <div id="scroller-front-container">
+        <div id="scroller-front"></div>
+      </div>
+      <div id="game-begin-view">G to start <br />W, A, S, D to move<br />P to pause</div>
       <div id="game-over-view">
         <p>
           GAME OVER
@@ -24,6 +26,7 @@
         </p>
       </div>
       <div id="player"></div>
+      <div id="fire-laser"></div>
     </div>
   </body>
 </html>

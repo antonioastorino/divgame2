@@ -8,12 +8,14 @@ let g_fov_max_z = 0;
 let g_fov_min_z = 0;
 let g_num_of_walls = 0;
 let g_player_size = 0;
-let g_canvas = undefined;
-let g_canvasBack = undefined;
+let canvas = undefined;
+let g_scrollerBackContainer = undefined;
+let g_scrollerFrontContainer = undefined;
 let g_scoreValueDiv = undefined;
 let g_beginViewDiv = undefined;
 let g_overViewDiv = undefined;
 let g_playerDiv = undefined;
+let g_fireLaserDiv = undefined;
 let g_engine_update_cb = undefined;
 let g_finalScore = 0;
 
@@ -89,20 +91,18 @@ function jsGetDt() {
   return g_dt;
 }
 
-function jsUpdateScore(score) {
+function jsUpdate(score, scroll, position_p) {
   g_finalScore = score;
   g_scoreValueDiv.innerText = score;
-}
 
-function jsUpdatePlayerPosition(position_p) {
+  g_scrollerFrontContainer.scroll(scroll, 0);
+  g_scrollerBackContainer.scroll(scroll / 2, 0);
+
   const [x, y] = new Float32Array(memory.buffer, position_p, 2);
   g_playerDiv.style.left = `${x - g_player_size / 2}px`;
-  g_playerDiv.style.bottom = `${y}px`;
-}
-
-function jsUpdateScroll(scroll) {
-  g_canvas.scroll(scroll, 0);
-  g_canvasBack.scroll(scroll / 2, 0);
+  g_playerDiv.style.bottom = `${y - g_player_size / 2}px`;
+  g_fireLaserDiv.style.left = `${x + g_player_size / 2}px`;
+  g_fireLaserDiv.style.bottom = `${y - 10}px`;
 }
 
 function jsFire() {
@@ -117,43 +117,61 @@ const importObj = {
     jsLogFloat,
     jsGetDt,
     jsSetEngineParams,
-    jsUpdateScore,
-    jsUpdatePlayerPosition,
-    jsUpdateScroll,
+    jsUpdate,
     jsFire,
   },
 };
 
 window.onload = () => {
-  g_canvasBack = document.getElementById("canvas-back");
-  g_canvas = document.getElementById("canvas");
-  g_playerDiv = document.getElementById("player");
+  canvas = document.getElementById("canvas");
+  const scrollerFront = document.getElementById("scroller-front");
+  const scrollerBack = document.getElementById("scroller-back");
   const scoreDiv = document.getElementById("score");
-  g_scoreValueDiv = document.getElementById("score-value");
   const body = document.getElementById("body");
+
+  g_scrollerFrontContainer = document.getElementById("scroller-front-container");
+  g_scrollerBackContainer = document.getElementById("scroller-back-container");
+  g_playerDiv = document.getElementById("player");
+  g_fireLaserDiv = document.getElementById("fire-laser");
+  g_scoreValueDiv = document.getElementById("score-value");
   g_beginViewDiv = document.getElementById("game-begin-view");
   g_overViewDiv = document.getElementById("game-over-view");
-  const scrollerBackDiv = document.getElementById("scroller-back");
-  scrollerBackDiv.style.position = "static";
-  scrollerBackDiv.style.height = "100%";
-  scrollerBackDiv.style.backgroundRepeat = "no-repeat";
-  scrollerBackDiv.style.backgroundImage = "url(/assets/clouds.jpg)";
-  scrollerBackDiv.style.backgroundSize = "100% 100%";
 
-  const scrollerDiv = document.getElementById("scroller");
-  scrollerDiv.style.position = "static";
-  scrollerDiv.style.height = "100%";
-  scrollerDiv.style.backgroundImage = "url(/assets/mountains.png)";
-  scrollerDiv.style.backgroundRepeat = "no-repeat";
-  scrollerDiv.style.backgroundSize = "100% 100%";
+  scrollerBack.style.position = "absolute";
+  scrollerBack.style.height = "100%";
+  scrollerBack.style.backgroundRepeat = "no-repeat";
+  scrollerBack.style.backgroundImage = "url(/assets/clouds.jpg)";
+  scrollerBack.style.backgroundSize = "100% 100%";
 
+  scrollerFront.style.position = "absolute";
+  scrollerFront.style.height = "100%";
+  scrollerFront.style.backgroundImage = "url(/assets/mountains.png)";
+  scrollerFront.style.backgroundRepeat = "no-repeat";
+  scrollerFront.style.backgroundSize = "100% 100%";
+
+  body.style.display = "flex";
+  body.style.position = "absolute";
+  body.style.justifyContent = "center";
+  body.style.alignItems = "center";
+  body.style.width = "100%";
+  body.style.height = "100%";
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
-  g_beginViewDiv.style.position = "relative";
-  g_canvasBack.style.position = "absolute";
-  g_canvasBack.style.overflow = "hidden";
-  g_canvas.style.position = "absolute";
-  g_canvas.style.overflow = "hidden";
+
+  canvas.style.display = "block";
+  canvas.style.position = "absolute";
+  canvas.style.overflow = "hidden";
+
+  g_beginViewDiv.style.position = "absolute";
+  g_scrollerFrontContainer.style.position = "absolute";
+  g_scrollerFrontContainer.style.overflow = "hidden";
+  g_scrollerFrontContainer.style.width = "100%";
+  g_scrollerFrontContainer.style.height = "100%";
+  g_scrollerBackContainer.style.position = "absolute";
+  g_scrollerBackContainer.style.overflow = "hidden";
+  g_scrollerBackContainer.style.width = "100%";
+  g_scrollerBackContainer.style.height = "100%";
+
   g_beginViewDiv.style.width = "100%";
   g_beginViewDiv.style.height = "100%";
   g_beginViewDiv.style.backgroundColor = "blue";
@@ -164,7 +182,7 @@ window.onload = () => {
   g_beginViewDiv.style.fontSize = "xx-large";
   g_beginViewDiv.style.fontFamily = "monospace";
 
-  g_overViewDiv.style.position = "relative";
+  g_overViewDiv.style.position = "absolute";
   g_overViewDiv.style.width = "100%";
   g_overViewDiv.style.height = "100%";
   g_overViewDiv.style.backgroundColor = "red";
@@ -176,16 +194,23 @@ window.onload = () => {
   g_overViewDiv.style.fontSize = "xx-large";
   g_overViewDiv.style.fontFamily = "monospace";
   g_overViewDiv.style.textAlign = "center";
+  g_overViewDiv.style.display = "none";
 
   scoreDiv.style.position = "fixed";
   scoreDiv.style.display = "block";
   scoreDiv.style.zIndex = 99999;
   scoreDiv.style.fontFamily = "monospace";
 
-  g_playerDiv.style.position = "sticky";
+  g_playerDiv.style.position = "absolute";
   g_playerDiv.style.zIndex = 100000;
   g_playerDiv.style.backgroundImage = "url(/assets/player.png)";
   g_playerDiv.style.backgroundSize = "contain";
+
+  g_fireLaserDiv.style.position = "absolute";
+  g_fireLaserDiv.style.zIndex = 100000;
+  g_fireLaserDiv.style.height = "20px";
+  g_fireLaserDiv.style.width = "500px";
+  g_fireLaserDiv.style.backgroundColor = "red";
 
   WebAssembly.instantiateStreaming(wasmFile, importObj).then((result) => {
     memory = result.instance.exports.memory;
@@ -194,16 +219,10 @@ window.onload = () => {
     for (let i = 0; i < g_num_of_walls; i++) {
       g_walls.push(new Wall());
     }
-    scrollerBackDiv.style.width = `${2 * g_window_width}px`;
-    scrollerDiv.style.width = `${2 * g_window_width}px`;
-    g_canvas.style.width = `${g_window_width}px`;
-    g_canvas.style.height = `${g_window_height}px`;
-    g_canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
-    g_canvas.style.left = `calc(50% - ${g_window_width / 2}px)`;
-    g_canvasBack.style.width = `${g_window_width}px`;
-    g_canvasBack.style.height = `${g_window_height}px`;
-    g_canvasBack.style.top = `calc(50% - ${g_window_height / 2}px)`;
-    g_canvasBack.style.left = `calc(50% - ${g_window_width / 2}px)`;
+    scrollerFront.style.width = `${2 * g_window_width}px`;
+    scrollerBack.style.width = `${2 * g_window_width}px`;
+    canvas.style.width = `${g_window_width}px`;
+    canvas.style.height = `${g_window_height}px`;
     g_playerDiv.style.width = `${g_player_size}px`;
     g_playerDiv.style.height = `${g_player_size}px`;
     body.onkeydown = (ev) => {
