@@ -18,6 +18,7 @@
 #define WINDOW_HEIGHT_PX (600)
 #define PLAYER_SPEED_XY (300)
 #define PLAYER_SIZE_PX (WINDOW_HEIGHT_PX / 8)
+#define PLAYER_FIRE_HALF_PULSE_S (0.2)
 #define PLAYER_MIN_FIRE_PERIOD_S (0.5)
 #define PLAYER_MIN_POSITION_X (100)
 #define PLAYER_MAX_POSITION_X (WINDOW_WIDTH_PX - PLAYER_MIN_POSITION_X)
@@ -100,7 +101,7 @@ void jsLogFloat(float);
 float jsGetDt(void);
 void jsSetEngineParams(EngineParams);
 void jsUpdate(int, float, Vector3D);
-void jsFire(void);
+void jsFire(float);
 
 void engine_init(void)
 {
@@ -204,11 +205,19 @@ void __update_output(void)
             // Infinite positive scroll
             g_scroll = 0;
         }
-        if (g_player_action.player_fire)
+        if (g_player_action.player_fire || g_player_action.player_fire_time > 0.0)
         {
-            if (g_player_action.player_fire_time == 0.0)
+            if (g_player_action.player_fire_time <= PLAYER_FIRE_HALF_PULSE_S)
             {
-                jsFire();
+                jsFire(g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
+            }
+            else if (g_player_action.player_fire_time <= 2 * PLAYER_FIRE_HALF_PULSE_S)
+            {
+                jsFire(2 - g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
+            }
+            else
+            {
+                jsFire(0);
             }
             if (g_player_action.player_fire_time < PLAYER_MIN_FIRE_PERIOD_S)
             {

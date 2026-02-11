@@ -105,8 +105,8 @@ function jsUpdate(score, scroll, position_p) {
   g_fireLaserDiv.style.bottom = `${y - 10}px`;
 }
 
-function jsFire() {
-  console.log("fire");
+function jsFire(fire) {
+  g_fireLaserDiv.style.opacity = fire;
 }
 
 const importObj = {
@@ -209,8 +209,9 @@ window.onload = () => {
   g_fireLaserDiv.style.position = "absolute";
   g_fireLaserDiv.style.zIndex = 100000;
   g_fireLaserDiv.style.height = "20px";
-  g_fireLaserDiv.style.width = "500px";
-  g_fireLaserDiv.style.backgroundColor = "red";
+  g_fireLaserDiv.style.backgroundImage = "linear-gradient(rgba(255, 0, 0, 0), rgba(255, 0, 0, 1), rgba(255, 0, 0, 0))";
+  g_fireLaserDiv.style.animationProperty = "opacity";
+  g_fireLaserDiv.style.opacity = 0;
 
   WebAssembly.instantiateStreaming(wasmFile, importObj).then((result) => {
     memory = result.instance.exports.memory;
@@ -225,6 +226,7 @@ window.onload = () => {
     canvas.style.height = `${g_window_height}px`;
     g_playerDiv.style.width = `${g_player_size}px`;
     g_playerDiv.style.height = `${g_player_size}px`;
+    g_fireLaserDiv.style.width = `${g_window_width}px`;
     body.onkeydown = (ev) => {
       ev.preventDefault();
       result.instance.exports.engine_key_down(ev.keyCode);
