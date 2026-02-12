@@ -46,22 +46,15 @@ typedef struct
 
 typedef struct
 {
-    Vector3D position;
-    Size2D size;
-} Rect;
-
-typedef struct
-{
-    Vector3D position;
-    bool alive;
-    bool animated;
-} Entity;
+    Vector2D position;
+} Player;
 
 typedef struct
 {
     int window_height_px;
     int window_width_px;
     int player_size_px;
+    int number_of_enimies;
 } EngineParams;
 
 typedef struct
@@ -79,6 +72,20 @@ typedef struct
 
 typedef enum
 {
+    ENEMY_WAITING,
+    ENEMY_ALIVE,
+    ENEMY_DEAD,
+} EnemyState;
+
+typedef struct
+{
+    float show_time;
+    EnemyState state;
+    Vector2D position;
+} Enemy;
+
+typedef enum
+{
     GAME_BEGIN,
     GAME_PAUSED,
     GAME_RUNNING,
@@ -88,11 +95,29 @@ typedef enum
 GameState g_game_state       = GAME_BEGIN;
 int g_keys_pressed           = 0;
 PlayerAction g_player_action = {0};
-Entity g_player              = {0};
+Player g_player              = {0};
 float g_dt                   = 0;
 bool g_prev_pause_pressed    = false;
 int g_score                  = 0;
 float g_scroll               = 0;
+Enemy g_enemy_list[]         = {
+    (Enemy){
+                .show_time = 2,
+                .state     = ENEMY_WAITING,
+                .position  = (Vector2D){
+                     .x = WINDOW_WIDTH_PX - 100,
+                     .y = 100,
+        },
+    },
+    (Enemy){
+                .show_time = 2,
+                .state     = ENEMY_WAITING,
+                .position  = (Vector2D){
+                     .x = WINDOW_WIDTH_PX - 100,
+                     .y = 400,
+        },
+    },
+};
 
 void jsLogVector3D(Vector3D);
 void jsLogCStr(char*);
@@ -100,15 +125,17 @@ void jsLogInt(int);
 void jsLogFloat(float);
 float jsGetDt(void);
 void jsSetEngineParams(EngineParams);
-void jsUpdate(int, float, Vector3D);
+void jsUpdate(int, float, Vector2D);
+void jsUpdateEnemy(int, int, Vector2D);
 void jsFire(float);
 
 void engine_init(void)
 {
     jsSetEngineParams((EngineParams){
-        .window_height_px = WINDOW_HEIGHT_PX,
-        .window_width_px  = WINDOW_WIDTH_PX,
-        .player_size_px   = PLAYER_SIZE_PX,
+        .window_height_px  = WINDOW_HEIGHT_PX,
+        .window_width_px   = WINDOW_WIDTH_PX,
+        .player_size_px    = PLAYER_SIZE_PX,
+        .number_of_enimies = sizeof(g_enemy_list) / sizeof(g_enemy_list[0]),
     });
 }
 
@@ -128,6 +155,78 @@ void engine_key_up(int key_code)
         return;
     }
     g_keys_pressed &= ~(1 << (key_code - KEY_BASE));
+}
+
+void __evolve_enemies(void)
+{
+    static float total_time = 0;
+    total_time += g_dt;
+    Enemy* curr_enemy_p = nullptr;
+    for (unsigned long enemy_index = 0; enemy_index < sizeof(g_enemy_list) / sizeof(g_enemy_list[0]); enemy_index++)
+    {
+        curr_enemy_p = &g_enemy_list[enemy_index];
+        if (curr_enemy_p->show_time > total_time || curr_enemy_p->state == ENEMY_DEAD)
+        {
+            continue;
+        }
+
+        if (curr_enemy_p->position.x > 0)
+        {
+            curr_enemy_p->state = ENEMY_ALIVE;
+            curr_enemy_p->position.x -= g_dt * PLAYER_SPEED_XY / 2;
+            float dx = curr_enemy_p->position.x - g_player.position.x;
+            float dy = curr_enemy_p->position.y - g_player.position.y;
+            // Player attracts enemies when close enough
+            if (dx > 0 && dx < (PLAYER_SIZE_PX * 3))
+            {
+                if (dy < 0)
+                {
+                    curr_enemy_p->position.y += g_dt * PLAYER_SPEED_XY / 3.0;
+                }
+                else if (dy > 0)
+                {
+                    curr_enemy_p->position.y -= g_dt * PLAYER_SPEED_XY / 3.0;
+                }
+            }
+        }
+        else
+        {
+            curr_enemy_p->state = ENEMY_DEAD;
+        }
+
+        jsUpdateEnemy(enemy_index, curr_enemy_p->state, curr_enemy_p->position);
+    }
+}
+
+void __evolve_fire(void)
+{
+    if (g_player_action.player_fire || g_player_action.player_fire_time > 0.0)
+    {
+        if (g_player_action.player_fire_time <= PLAYER_FIRE_HALF_PULSE_S)
+        {
+            jsFire(g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
+        }
+        else if (g_player_action.player_fire_time <= 2 * PLAYER_FIRE_HALF_PULSE_S)
+        {
+            jsFire(2 - g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
+        }
+        else
+        {
+            jsFire(0);
+        }
+        if (g_player_action.player_fire_time < PLAYER_MIN_FIRE_PERIOD_S)
+        {
+            g_player_action.player_fire_time += g_dt;
+        }
+        else
+        {
+            g_player_action.player_fire_time = 0.0;
+        }
+    }
+    else
+    {
+        g_player_action.player_fire_time = 0.0;
+    }
 }
 
 void __read_input(void)
@@ -157,7 +256,7 @@ void __evolve(void)
         if (g_player_action.player_start)
         {
             g_game_state                     = GAME_RUNNING;
-            g_player.position                = (Vector3D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2, .z = 0};
+            g_player.position                = (Vector2D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2};
             g_player_action.player_start     = false;
             g_player_action.player_fire_time = 0.0;
             g_score                          = 0;
@@ -205,33 +304,8 @@ void __update_output(void)
             // Infinite positive scroll
             g_scroll = 0;
         }
-        if (g_player_action.player_fire || g_player_action.player_fire_time > 0.0)
-        {
-            if (g_player_action.player_fire_time <= PLAYER_FIRE_HALF_PULSE_S)
-            {
-                jsFire(g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
-            }
-            else if (g_player_action.player_fire_time <= 2 * PLAYER_FIRE_HALF_PULSE_S)
-            {
-                jsFire(2 - g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
-            }
-            else
-            {
-                jsFire(0);
-            }
-            if (g_player_action.player_fire_time < PLAYER_MIN_FIRE_PERIOD_S)
-            {
-                g_player_action.player_fire_time += g_dt;
-            }
-            else
-            {
-                g_player_action.player_fire_time = 0.0;
-            }
-        }
-        else
-        {
-            g_player_action.player_fire_time = 0.0;
-        }
+        __evolve_fire();
+        __evolve_enemies();
         jsUpdate(g_score, g_scroll, g_player.position);
     }
 }

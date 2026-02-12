@@ -1,14 +1,14 @@
 let memory = undefined;
 let g_get_wall_rect = undefined;
 let g_dt = 0;
-let g_walls = [];
+let g_enemies = [];
 let g_window_height = 0;
 let g_window_width = 0;
 let g_fov_max_z = 0;
 let g_fov_min_z = 0;
-let g_num_of_walls = 0;
 let g_player_size = 0;
-let canvas = undefined;
+let g_num_of_enemies = 0;
+let g_canvas = undefined;
 let g_scrollerBackContainer = undefined;
 let g_scrollerFrontContainer = undefined;
 let g_scoreValueDiv = undefined;
@@ -25,6 +25,35 @@ const GameState = {
   RUNNING: 2,
   OVER: 3,
 };
+
+const EnemyState = {
+  WAITING: 0,
+  ALIVE: 1,
+  DEAD: 2,
+};
+
+class Enemy {
+  __enemyDiv = undefined;
+  constructor() {
+    this.__enemyDiv = document.createElement("div");
+    g_canvas.appendChild(this.__enemyDiv);
+    this.__enemyDiv.style.backgroundColor = "red";
+    this.__enemyDiv.style.position = "absolute";
+    this.__enemyDiv.style.width = "100px";
+    this.__enemyDiv.style.height = "100px";
+    this.hide();
+  }
+
+  hide() {
+    this.__enemyDiv.style.display = "none";
+  }
+
+  show(x, y) {
+    this.__enemyDiv.style.display = "block";
+    this.__enemyDiv.style.left = `${x}px`;
+    this.__enemyDiv.style.bottom = `${y}px`;
+  }
+}
 
 const wasmFile = fetch("./src.wasm");
 
@@ -52,7 +81,7 @@ const jsLogFloat = (v) => {
 };
 
 function jsSetEngineParams(params_p) {
-  [g_window_height, g_window_width, g_player_size] = new Int32Array(memory.buffer, params_p, 3);
+  [g_window_height, g_window_width, g_player_size, g_num_of_enemies] = new Int32Array(memory.buffer, params_p, 4);
 }
 
 let prevTimeStamp = 0;
@@ -105,6 +134,15 @@ function jsUpdate(score, scroll, position_p) {
   g_fireLaserDiv.style.bottom = `${y - 10}px`;
 }
 
+function jsUpdateEnemy(index, state, position_p) {
+  if (state != EnemyState.ALIVE) {
+    g_enemies[index].hide();
+    return;
+  }
+  const [x, y] = new Float32Array(memory.buffer, position_p, 2);
+  g_enemies[index].show(x, y);
+}
+
 function jsFire(fire) {
   g_fireLaserDiv.style.opacity = fire;
 }
@@ -118,12 +156,13 @@ const importObj = {
     jsGetDt,
     jsSetEngineParams,
     jsUpdate,
+    jsUpdateEnemy,
     jsFire,
   },
 };
 
 window.onload = () => {
-  canvas = document.getElementById("canvas");
+  g_canvas = document.getElementById("canvas");
   const scrollerFront = document.getElementById("scroller-front");
   const scrollerBack = document.getElementById("scroller-back");
   const scoreDiv = document.getElementById("score");
@@ -158,9 +197,9 @@ window.onload = () => {
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
 
-  canvas.style.display = "block";
-  canvas.style.position = "absolute";
-  canvas.style.overflow = "hidden";
+  g_canvas.style.display = "block";
+  g_canvas.style.position = "absolute";
+  g_canvas.style.overflow = "hidden";
 
   g_beginViewDiv.style.position = "absolute";
   g_scrollerFrontContainer.style.position = "absolute";
@@ -217,13 +256,13 @@ window.onload = () => {
     memory = result.instance.exports.memory;
     result.instance.exports.engine_init();
 
-    for (let i = 0; i < g_num_of_walls; i++) {
-      g_walls.push(new Wall());
+    for (let i = 0; i < g_num_of_enemies; i++) {
+      g_enemies.push(new Enemy());
     }
     scrollerFront.style.width = `${2 * g_window_width}px`;
     scrollerBack.style.width = `${2 * g_window_width}px`;
-    canvas.style.width = `${g_window_width}px`;
-    canvas.style.height = `${g_window_height}px`;
+    g_canvas.style.width = `${g_window_width}px`;
+    g_canvas.style.height = `${g_window_height}px`;
     g_playerDiv.style.width = `${g_player_size}px`;
     g_playerDiv.style.height = `${g_player_size}px`;
     g_fireLaserDiv.style.width = `${g_window_width}px`;
