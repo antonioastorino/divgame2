@@ -16,6 +16,8 @@
 #define _START_MASK (1 << (KEY_G - KEY_BASE))
 #define WINDOW_WIDTH_PX (1000)
 #define WINDOW_HEIGHT_PX (600)
+#define ENEMY_WIDTH_PX (100)
+#define ENEMY_HEIGHT_PX (37)
 #define PLAYER_SPEED_XY (300)
 #define PLAYER_SIZE_PX (WINDOW_HEIGHT_PX / 8)
 #define PLAYER_FIRE_HALF_PULSE_S (0.2)
@@ -54,6 +56,8 @@ typedef struct
     int window_height_px;
     int window_width_px;
     int player_size_px;
+    int enemy_height_px;
+    int enemy_width_px;
     int number_of_enimies;
 } EngineParams;
 
@@ -64,7 +68,6 @@ typedef struct
     bool player_up;
     bool player_down;
     bool player_fire;
-    float player_fire_time;
     bool player_pause;
     bool prev_player_pause;
     bool player_start;
@@ -79,10 +82,17 @@ typedef enum
 
 typedef struct
 {
-    float show_time;
+    int show_time;
     EnemyState state;
     Vector2D position;
 } Enemy;
+
+typedef struct
+{
+    bool on;
+    bool hit;
+    float fire_time;
+} Laser;
 
 typedef enum
 {
@@ -101,23 +111,14 @@ bool g_prev_pause_pressed    = false;
 int g_score                  = 0;
 float g_scroll               = 0;
 Enemy g_enemy_list[]         = {
-    (Enemy){
-                .show_time = 2,
-                .state     = ENEMY_WAITING,
-                .position  = (Vector2D){
-                     .x = WINDOW_WIDTH_PX - 100,
-                     .y = 100,
-        },
-    },
-    (Enemy){
-                .show_time = 2,
-                .state     = ENEMY_WAITING,
-                .position  = (Vector2D){
-                     .x = WINDOW_WIDTH_PX - 100,
-                     .y = 400,
-        },
-    },
+    (Enemy){.show_time = 2, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 100}},
+    (Enemy){.show_time = 2, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 400}},
+    (Enemy){.show_time = 4, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 100}},
+    (Enemy){.show_time = 4, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 400}},
+    (Enemy){.show_time = 5, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 100}},
+    (Enemy){.show_time = 5, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 400}},
 };
+Laser g_laser = {0};
 
 void jsLogVector3D(Vector3D);
 void jsLogCStr(char*);
@@ -135,6 +136,8 @@ void engine_init(void)
         .window_height_px  = WINDOW_HEIGHT_PX,
         .window_width_px   = WINDOW_WIDTH_PX,
         .player_size_px    = PLAYER_SIZE_PX,
+        .enemy_height_px   = ENEMY_HEIGHT_PX,
+        .enemy_width_px    = ENEMY_WIDTH_PX,
         .number_of_enimies = sizeof(g_enemy_list) / sizeof(g_enemy_list[0]),
     });
 }
@@ -188,6 +191,16 @@ void __evolve_enemies(void)
                     curr_enemy_p->position.y -= g_dt * PLAYER_SPEED_XY / 3.0;
                 }
             }
+
+            if (dx > 0
+                && dy > -(ENEMY_HEIGHT_PX / 2 + 10)
+                && dy < (ENEMY_HEIGHT_PX / 2 + 10)
+                && g_laser.on && !g_laser.hit)
+            {
+                curr_enemy_p->state = ENEMY_DEAD;
+                g_laser.hit         = true;
+                g_score++;
+            }
         }
         else
         {
@@ -200,32 +213,36 @@ void __evolve_enemies(void)
 
 void __evolve_fire(void)
 {
-    if (g_player_action.player_fire || g_player_action.player_fire_time > 0.0)
+    if (g_player_action.player_fire || g_laser.fire_time > 0.0)
     {
-        if (g_player_action.player_fire_time <= PLAYER_FIRE_HALF_PULSE_S)
+        if (g_laser.fire_time <= PLAYER_FIRE_HALF_PULSE_S)
         {
-            jsFire(g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
+            jsFire(g_laser.fire_time / PLAYER_FIRE_HALF_PULSE_S);
+            g_laser.on = true;
         }
-        else if (g_player_action.player_fire_time <= 2 * PLAYER_FIRE_HALF_PULSE_S)
+        else if (g_laser.fire_time <= 2 * PLAYER_FIRE_HALF_PULSE_S)
         {
-            jsFire(2 - g_player_action.player_fire_time / PLAYER_FIRE_HALF_PULSE_S);
+            jsFire(2 - g_laser.fire_time / PLAYER_FIRE_HALF_PULSE_S);
         }
         else
         {
             jsFire(0);
+            g_laser.on = false;
         }
-        if (g_player_action.player_fire_time < PLAYER_MIN_FIRE_PERIOD_S)
+        if (g_laser.fire_time < PLAYER_MIN_FIRE_PERIOD_S)
         {
-            g_player_action.player_fire_time += g_dt;
+            g_laser.fire_time += g_dt;
         }
         else
         {
-            g_player_action.player_fire_time = 0.0;
+            g_laser.fire_time = 0.0;
+            g_laser.hit       = false;
         }
     }
     else
     {
-        g_player_action.player_fire_time = 0.0;
+        g_laser.fire_time = 0.0;
+        g_laser.hit       = false;
     }
 }
 
@@ -255,11 +272,11 @@ void __evolve(void)
     case GAME_OVER:
         if (g_player_action.player_start)
         {
-            g_game_state                     = GAME_RUNNING;
-            g_player.position                = (Vector2D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2};
-            g_player_action.player_start     = false;
-            g_player_action.player_fire_time = 0.0;
-            g_score                          = 0;
+            g_game_state                 = GAME_RUNNING;
+            g_player.position            = (Vector2D){.x = PLAYER_MIN_POSITION_X, .y = WINDOW_HEIGHT_PX / 2};
+            g_player_action.player_start = false;
+            g_laser.fire_time            = 0.0;
+            g_score                      = 0;
             jsUpdate(g_score, g_scroll, g_player.position);
         }
         break;

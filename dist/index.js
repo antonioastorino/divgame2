@@ -7,6 +7,8 @@ let g_window_width = 0;
 let g_fov_max_z = 0;
 let g_fov_min_z = 0;
 let g_player_size = 0;
+let g_enemy_height = 0;
+let g_enemy_width = 0;
 let g_num_of_enemies = 0;
 let g_canvas = undefined;
 let g_scrollerBackContainer = undefined;
@@ -37,10 +39,11 @@ class Enemy {
   constructor() {
     this.__enemyDiv = document.createElement("div");
     g_canvas.appendChild(this.__enemyDiv);
-    this.__enemyDiv.style.backgroundColor = "red";
+    this.__enemyDiv.style.backgroundImage = "url(/assets/rocket.png)";
+    this.__enemyDiv.style.backgroundSize = "100%";
     this.__enemyDiv.style.position = "absolute";
-    this.__enemyDiv.style.width = "100px";
-    this.__enemyDiv.style.height = "100px";
+    this.__enemyDiv.style.width = `${g_enemy_width}px`;
+    this.__enemyDiv.style.height = `${g_enemy_height}px`;
     this.hide();
   }
 
@@ -50,8 +53,8 @@ class Enemy {
 
   show(x, y) {
     this.__enemyDiv.style.display = "block";
-    this.__enemyDiv.style.left = `${x}px`;
-    this.__enemyDiv.style.bottom = `${y}px`;
+    this.__enemyDiv.style.left = `${x - g_enemy_width / 2}px`;
+    this.__enemyDiv.style.bottom = `${y - g_enemy_height / 2}px`;
   }
 }
 
@@ -81,7 +84,11 @@ const jsLogFloat = (v) => {
 };
 
 function jsSetEngineParams(params_p) {
-  [g_window_height, g_window_width, g_player_size, g_num_of_enemies] = new Int32Array(memory.buffer, params_p, 4);
+  [g_window_height, g_window_width, g_player_size, g_enemy_height, g_enemy_width, g_num_of_enemies] = new Int32Array(
+    memory.buffer,
+    params_p,
+    6
+  );
 }
 
 let prevTimeStamp = 0;
