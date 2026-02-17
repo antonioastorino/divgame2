@@ -264,6 +264,36 @@ void __read_input(void)
     g_player_action.player_start = (g_keys_pressed & _START_MASK) && (g_game_state == GAME_BEGIN || g_game_state == GAME_OVER);
 }
 
+void __evolve_player(void)
+{
+    g_player.position.x += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_right - g_player_action.player_left);
+    g_player.position.y += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_up - g_player_action.player_down);
+
+    if (g_player.position.x < PLAYER_MIN_POSITION_X)
+    {
+        g_player.position.x = PLAYER_MIN_POSITION_X;
+    }
+    if (g_player.position.x > PLAYER_MAX_POSITION_X)
+    {
+        g_player.position.x = PLAYER_MAX_POSITION_X;
+    }
+}
+
+void __evolve_scroll(void)
+{
+    g_scroll += g_dt * SCROLL_SPEED;
+    if (g_scroll < 0)
+    {
+        // Infinite negative scroll
+        g_scroll = SCROLL_MAX;
+    }
+    if (g_scroll > SCROLL_MAX)
+    {
+        // Infinite positive scroll
+        g_scroll = 0;
+    }
+}
+
 void __evolve(void)
 {
     switch (g_game_state)
@@ -277,13 +307,19 @@ void __evolve(void)
             g_player_action.player_start = false;
             g_laser.fire_time            = 0.0;
             g_score                      = 0;
-            jsUpdate(g_score, g_scroll, g_player.position);
         }
         break;
     case GAME_RUNNING:
         if (g_player_action.prev_player_pause)
         {
             g_game_state = GAME_PAUSED;
+        }
+        else
+        {
+            __evolve_scroll();
+            __evolve_player();
+            __evolve_fire();
+            __evolve_enemies();
         }
         break;
     case GAME_PAUSED:
@@ -299,30 +335,6 @@ void __update_output(void)
 {
     if (g_game_state == GAME_RUNNING)
     {
-        g_player.position.x += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_right - g_player_action.player_left);
-        g_player.position.y += g_dt * PLAYER_SPEED_XY * (float)(g_player_action.player_up - g_player_action.player_down);
-        g_scroll += g_dt * SCROLL_SPEED;
-
-        if (g_player.position.x < PLAYER_MIN_POSITION_X)
-        {
-            g_player.position.x = PLAYER_MIN_POSITION_X;
-        }
-        if (g_player.position.x > PLAYER_MAX_POSITION_X)
-        {
-            g_player.position.x = PLAYER_MAX_POSITION_X;
-        }
-        if (g_scroll < 0)
-        {
-            // Infinite negative scroll
-            g_scroll = SCROLL_MAX;
-        }
-        if (g_scroll > SCROLL_MAX)
-        {
-            // Infinite positive scroll
-            g_scroll = 0;
-        }
-        __evolve_fire();
-        __evolve_enemies();
         jsUpdate(g_score, g_scroll, g_player.position);
     }
 }
