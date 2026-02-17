@@ -19,7 +19,8 @@
 #define ENEMY_WIDTH_PX (100)
 #define ENEMY_HEIGHT_PX (37)
 #define PLAYER_SPEED_XY (300)
-#define PLAYER_SIZE_PX (WINDOW_HEIGHT_PX / 8)
+#define PLAYER_HEIGHT_PX (37)
+#define PLAYER_WIDTH_PX (70)
 #define PLAYER_FIRE_HALF_PULSE_S (0.2)
 #define PLAYER_MIN_FIRE_PERIOD_S (0.5)
 #define PLAYER_MIN_POSITION_X (100)
@@ -55,7 +56,8 @@ typedef struct
 {
     int window_height_px;
     int window_width_px;
-    int player_size_px;
+    int player_height_px;
+    int player_width_px;
     int enemy_height_px;
     int enemy_width_px;
     int number_of_enimies;
@@ -110,7 +112,9 @@ float g_dt                   = 0;
 bool g_prev_pause_pressed    = false;
 int g_score                  = 0;
 float g_scroll               = 0;
-Enemy g_enemy_list[]         = {
+float g_total_time           = 0;
+
+Enemy g_enemy_list[] = {
     (Enemy){.show_time = 2, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 100}},
     (Enemy){.show_time = 2, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 400}},
     (Enemy){.show_time = 4, .state = ENEMY_WAITING, .position = (Vector2D){.x = WINDOW_WIDTH_PX - 100, .y = 100}},
@@ -135,7 +139,8 @@ void engine_init(void)
     jsSetEngineParams((EngineParams){
         .window_height_px  = WINDOW_HEIGHT_PX,
         .window_width_px   = WINDOW_WIDTH_PX,
-        .player_size_px    = PLAYER_SIZE_PX,
+        .player_height_px  = PLAYER_HEIGHT_PX,
+        .player_width_px   = PLAYER_WIDTH_PX,
         .enemy_height_px   = ENEMY_HEIGHT_PX,
         .enemy_width_px    = ENEMY_WIDTH_PX,
         .number_of_enimies = sizeof(g_enemy_list) / sizeof(g_enemy_list[0]),
@@ -162,13 +167,12 @@ void engine_key_up(int key_code)
 
 void __evolve_enemies(void)
 {
-    static float total_time = 0;
-    total_time += g_dt;
+    g_total_time += g_dt;
     Enemy* curr_enemy_p = nullptr;
     for (unsigned long enemy_index = 0; enemy_index < sizeof(g_enemy_list) / sizeof(g_enemy_list[0]); enemy_index++)
     {
         curr_enemy_p = &g_enemy_list[enemy_index];
-        if (curr_enemy_p->show_time > total_time || curr_enemy_p->state == ENEMY_DEAD)
+        if (curr_enemy_p->show_time > g_total_time || curr_enemy_p->state == ENEMY_DEAD)
         {
             continue;
         }
@@ -180,7 +184,7 @@ void __evolve_enemies(void)
             float dx = curr_enemy_p->position.x - g_player.position.x;
             float dy = curr_enemy_p->position.y - g_player.position.y;
             // Player attracts enemies when close enough
-            if (dx > 0 && dx < (PLAYER_SIZE_PX * 3))
+            if (dx > 0 && dx < (PLAYER_WIDTH_PX * 3))
             {
                 if (dy < 0)
                 {
@@ -200,6 +204,16 @@ void __evolve_enemies(void)
                 curr_enemy_p->state = ENEMY_DEAD;
                 g_laser.hit         = true;
                 g_score++;
+            }
+
+            if (dx > -(PLAYER_WIDTH_PX / 2.3 + ENEMY_WIDTH_PX / 2.3)
+                && dx < (PLAYER_WIDTH_PX / 2.3 + ENEMY_WIDTH_PX / 2.3)
+                && dy > -(PLAYER_HEIGHT_PX / 2.3 + ENEMY_HEIGHT_PX / 2.3)
+                && dy < (PLAYER_HEIGHT_PX / 2.3 + ENEMY_HEIGHT_PX / 2.3))
+            {
+                g_game_state = GAME_OVER;
+                jsLogFloat(dx);
+                jsLogFloat(dy);
             }
         }
         else
@@ -307,6 +321,9 @@ void __evolve(void)
             g_player_action.player_start = false;
             g_laser.fire_time            = 0.0;
             g_score                      = 0;
+            g_scroll                     = 0.0;
+            g_total_time                 = 0.0;
+            // TODO: Initialize enemies
         }
         break;
     case GAME_RUNNING:

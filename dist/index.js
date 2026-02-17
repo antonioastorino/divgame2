@@ -6,7 +6,8 @@ let g_window_height = 0;
 let g_window_width = 0;
 let g_fov_max_z = 0;
 let g_fov_min_z = 0;
-let g_player_size = 0;
+let g_player_width = 0;
+let g_player_height = 0;
 let g_enemy_height = 0;
 let g_enemy_width = 0;
 let g_num_of_enemies = 0;
@@ -84,11 +85,15 @@ const jsLogFloat = (v) => {
 };
 
 function jsSetEngineParams(params_p) {
-  [g_window_height, g_window_width, g_player_size, g_enemy_height, g_enemy_width, g_num_of_enemies] = new Int32Array(
-    memory.buffer,
-    params_p,
-    6
-  );
+  [
+    g_window_height, //
+    g_window_width,
+    g_player_height,
+    g_player_width,
+    g_enemy_height,
+    g_enemy_width,
+    g_num_of_enemies,
+  ] = new Int32Array(memory.buffer, params_p, 7);
 }
 
 let prevTimeStamp = 0;
@@ -135,9 +140,9 @@ function jsUpdate(score, scroll, position_p) {
   g_scrollerBackContainer.scroll(scroll / 2, 0);
 
   const [x, y] = new Float32Array(memory.buffer, position_p, 2);
-  g_playerDiv.style.left = `${x - g_player_size / 2}px`;
-  g_playerDiv.style.bottom = `${y - g_player_size / 2}px`;
-  g_fireLaserDiv.style.left = `${x + g_player_size / 2}px`;
+  g_playerDiv.style.left = `${x - g_player_width / 2}px`;
+  g_playerDiv.style.bottom = `${y - g_player_height / 2}px`;
+  g_fireLaserDiv.style.left = `${x + g_player_width / 2}px`;
   g_fireLaserDiv.style.bottom = `${y - 10}px`;
 }
 
@@ -270,8 +275,8 @@ window.onload = () => {
     scrollerBack.style.width = `${2 * g_window_width}px`;
     g_canvas.style.width = `${g_window_width}px`;
     g_canvas.style.height = `${g_window_height}px`;
-    g_playerDiv.style.width = `${g_player_size}px`;
-    g_playerDiv.style.height = `${g_player_size}px`;
+    g_playerDiv.style.width = `${g_player_width}px`;
+    g_playerDiv.style.height = `${g_player_height}px`;
     g_fireLaserDiv.style.width = `${g_window_width}px`;
     body.onkeydown = (ev) => {
       ev.preventDefault();
